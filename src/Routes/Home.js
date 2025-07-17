@@ -183,9 +183,11 @@ function Home() {
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", }}>
       <header className="header">
         <h1>프로젝트 목록</h1>
-        <button onClick={() => setShowForm(true)}>프로젝트 추가</button>
-        <button onClick={() => navigate("/store")}>상점</button>
-        <button onClick={() => navigate("/")}>로그아웃</button>
+        <div className="header-buttons">
+          <button onClick={() => setShowForm(true)}>프로젝트 추가</button>
+          <button onClick={() => navigate("/store")}>상점</button>
+          <button onClick={() => navigate("/")}>로그아웃</button>
+        </div>
       </header>
 
       <div

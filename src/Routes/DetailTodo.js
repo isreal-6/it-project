@@ -30,7 +30,17 @@ function DetailTodo() {
   return (
     <div>
       <header className="top">
-        <h2>메인 프로젝트: {project.title}</h2>
+        <div className="nav-buttons">
+          <button className="btn btn-back" onClick={() => navigate(-1)}>
+            ← 뒤로가기
+          </button>
+          <button className="btn btn-store" onClick={() => navigate("/store")}>
+            상점
+          </button>
+        </div>
+      </header>
+      <div className="container">
+          <h2>메인 프로젝트: {project.title}</h2>
         {subtask ? (
           <>
             <h3>{subtask.title}</h3>
@@ -40,10 +50,9 @@ function DetailTodo() {
         ) : (
           <p>서브태스크를 찾을 수 없습니다.</p>
         )}
-        <button onClick={() => navigate(-1)}>← 뒤로가기</button>
-        <button onClick={() => navigate("/store")}>상점</button>
-      </header>
       <TodoApp/>
+      </div>
+
     </div>
   );
 }
