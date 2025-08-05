@@ -18,7 +18,7 @@ function LandingPage() {
       </header>
 
       <main>
-        <h1 className="bigtext">웹서비스 핵심 카피라이팅</h1>
+        <h1 className="bigtext">재밌고 직관적인<br/>장기적 프로젝트 웹</h1>
         <Link to="/signup">
           <button className="signupbutton">회원가입</button>
         </Link>

@@ -14,10 +14,26 @@
   gap: 2rem;
 }
 
-.header-buttons {
+.header-buttons-section {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 2rem;
+}
+.header-button{
+  display: flex;
+  padding: 5px 12px;
+  background: #141414;
+  border: none;
+  border-radius: 4px;
+  font-family: 'Inter', sans-serif;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 19px;
+  color: #FFFFFF;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
 }
 
 .main-page {
