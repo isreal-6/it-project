@@ -38,7 +38,6 @@ function Home() {
     };
   });
 
-
   const getPosition = (id) => {
     const pos = positions[id];
     return pos
@@ -49,7 +48,6 @@ function Home() {
       : { top: 0, left: 0 };
   };
 
-
   const getRadius = (priority) => {
     if (priority === "상") return 75;
     if (priority === "중") return 55;
@@ -57,6 +55,9 @@ function Home() {
   };
 
   const handleMouseDown = (e) => {
+    // 사이드바 영역은 드래그 제외
+    if (e.target.closest('.sidebar')) return;
+    
     setIsDragging(true);
     setLastMousePos({ x: e.clientX, y: e.clientY });
   };
@@ -80,7 +81,6 @@ function Home() {
     setLastMousePos(null);
   };
 
-
   const handleAddProject = (newProject) => {
     const id = Date.now();
     const project = {
@@ -91,10 +91,11 @@ function Home() {
 
     const radius = getRadius(project.priority);
     const padding = 20;
-    const tryLimit = 500; // 시도 횟수 증가
-    const screenWidth = window.innerWidth;
+    const tryLimit = 500;
+    // 맵 영역만 고려 (사이드바 제외)
+    const mapWidth = window.innerWidth - 300; // 사이드바 너비 300px
     const screenHeight = window.innerHeight;
-    const centerX = screenWidth / 2;
+    const centerX = mapWidth / 2;
     const centerY = screenHeight / 2;
 
     const tempPositions = { ...positions };
@@ -112,41 +113,37 @@ function Home() {
       });
     };
 
-    const isWithinScreen = (cx, cy, r) => {
-      return cx - r >= 0 && cx + r <= screenWidth && cy - r >= 0 && cy + r <= screenHeight;
+    const isWithinMapArea = (cx, cy, r) => {
+      return cx - r >= 0 && cx + r <= mapWidth && cy - r >= 0 && cy + r <= screenHeight;
     };
 
     const numExisting = Object.keys(tempPositions).length;
 
     if (numExisting === 0) {
-      // 첫 프로젝트는 중앙에
       x = centerX;
       y = centerY;
       tempPositions[id] = { x, y, radius };
       placed = true;
     } else {
-      // 1단계: 기존 프로젝트들 주변의 빈 공간 탐색 (가까운 거리부터)
-      const maxDistance = Math.max(screenWidth, screenHeight);
-      const step = radius + padding; // 탐색 간격
-    
-      for (let distance = step; distance <= maxDistance && !placed && attempt < tryLimit; distance += step) {
-        // 각 거리에서 원형으로 탐색
-        const circumference = 2 * Math.PI * distance;
-        const angleStep = Math.max(0.1, (2 * Math.PI) / Math.max(8, circumference / (radius * 2))); // 적절한 각도 간격
+      const maxDistance = Math.max(mapWidth, screenHeight);
+      const step = radius + padding;
       
-        for (let angle = 0; angle < 2 * Math.PI && !placed && attempt < tryLimit; angle += angleStep) {
-          // 기존의 모든 프로젝트를 중심으로 탐색
-          const existingPositions = Object.values(tempPositions);
+      for (let distance = step; distance <= maxDistance && !placed && attempt < tryLimit; distance += step) {
+        const circumference = 2 * Math.PI * distance;
+        const angleStep = Math.max(0.1, (2 * Math.PI) / Math.max(8, circumference / (radius * 2)));
         
+        for (let angle = 0; angle < 2 * Math.PI && !placed && attempt < tryLimit; angle += angleStep) {
+          const existingPositions = Object.values(tempPositions);
+          
           for (const existingPos of existingPositions) {
             if (placed || attempt >= tryLimit) break;
-          
+            
             const cx = existingPos.x + Math.cos(angle) * distance;
             const cy = existingPos.y + Math.sin(angle) * distance;
-          
+            
             attempt++;
-          
-            if (isWithinScreen(cx, cy, radius) && !isOverlapping(cx, cy, radius, tempPositions)) {
+            
+            if (isWithinMapArea(cx, cy, radius) && !isOverlapping(cx, cy, radius, tempPositions)) {
               x = cx;
               y = cy;
               tempPositions[id] = { x, y, radius };
@@ -156,15 +153,14 @@ function Home() {
           }
         }
       }
-    
-      // 2단계: 여전히 배치되지 않았다면, 전체 화면을 그리드로 탐색
+      
       if (!placed) {
         const gridSize = Math.min(radius * 2 + padding, 50);
-      
-        for (let gx = radius; gx <= screenWidth - radius && !placed && attempt < tryLimit; gx += gridSize) {
+        
+        for (let gx = radius; gx <= mapWidth - radius && !placed && attempt < tryLimit; gx += gridSize) {
           for (let gy = radius; gy <= screenHeight - radius && !placed && attempt < tryLimit; gy += gridSize) {
             attempt++;
-          
+            
             if (!isOverlapping(gx, gy, radius, tempPositions)) {
               x = gx;
               y = gy;
@@ -175,14 +171,13 @@ function Home() {
           }
         }
       }
-    
-      // 3단계: 마지막 수단으로 랜덤 배치 시도
+      
       if (!placed) {
         const maxRandomAttempts = 200;
         for (let i = 0; i < maxRandomAttempts && !placed; i++) {
-          const rx = radius + Math.random() * (screenWidth - 2 * radius);
+          const rx = radius + Math.random() * (mapWidth - 2 * radius);
           const ry = radius + Math.random() * (screenHeight - 2 * radius);
-        
+          
           if (!isOverlapping(rx, ry, radius, tempPositions)) {
             x = rx;
             y = ry;
@@ -202,7 +197,6 @@ function Home() {
     setPositions(tempPositions);
   };
 
-
   const editProject = (updatedProject) => {
     setProjects((prev) =>
      prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
@@ -218,23 +212,18 @@ function Home() {
     });
   };
 
+  const getCurrentDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", }}>
-      <header className="header">
-        <h1>프로젝트 목록</h1>
-        <div className="header-buttons-section">
-          <button className="header-button" onClick={() => setShowForm(true)}>프로젝트 추가</button>
-          <button className="header-button" onClick={() => navigate("/store")}>상점</button>
-          <button className="header-button" onClick={() => navigate("/")}>로그아웃</button>
-        </div>
-      </header>
-
-      <div
-        className="main-page"
+    <div className="game-container">
+      {/* 메인 맵 영역 */}
+      <div 
+        className="map-area"
         onMouseDown={handleMouseDown}
         style={{
-          flex: 1,
           position: "relative",
           overflow: "hidden",
           userSelect: isDragging ? "none" : "auto",
@@ -258,9 +247,71 @@ function Home() {
           />
         )}
       </div>
+
+      {/* 게임 스타일 사이드바 */}
+      <div className="sidebar">
+        {/* 프로필 섹션 */}
+        <div className="profile-section">
+          <div className="profile-avatar">
+            <div className="avatar-circle"></div>
+          </div>
+        </div>
+        <div className="profile-info">
+          <h2 className="profile-name">플레이어</h2>
+          <p className="profile-date">{getCurrentDate()}</p>
+        </div>
+
+        {/* 메뉴 버튼들 */}
+        <div className="menu-section">
+          <button 
+            className="game-button add-project"
+            onClick={() => setShowForm(true)}
+          >
+            프로젝트 추가
+          </button>
+          <button 
+            className="game-button manage"
+            onClick={() => navigate("/manage")}
+          >
+            프로젝트 관리
+          </button>
+          <button 
+            className="game-button store"
+            onClick={() => navigate("/store")}
+          >
+            상점
+          </button>
+          <button 
+            className="game-button logout"
+            onClick={() => navigate("/")}
+          >
+            로그아웃
+          </button>
+        </div>
+
+        {/* 상태 정보 */}
+        <div className="status-section">
+          <div className="status-item">
+            <span className="status-label">총 프로젝트</span>
+            <span className="status-value">{projects.length}</span>
+          </div>
+          <div className="status-item">
+            <span className="status-label">완료된 프로젝트</span>
+            <span className="status-value">
+              {projects.filter(p => p.status === '완료').length}
+            </span>
+          </div>
+        </div>
+
+        {/* 하단 팁 */}
+        <div className="tip-section">
+          <div className="tip-box">
+            <p>💡 팁: 마우스로 맵을 드래그하여 이동할 수 있습니다!</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
-
 }
 
 export default Home;
