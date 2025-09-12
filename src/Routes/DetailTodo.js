@@ -3,6 +3,7 @@ import "./DetailTodo.css"
 
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { getProject as getProjectFromDb } from "../services/projects";
 
 function DetailTodo() {
   const { id: projectId, id2: nodeId } = useParams();
@@ -12,17 +13,19 @@ function DetailTodo() {
   const [subtask, setSubtask] = useState(null);
 
   useEffect(() => {
-    const projects = JSON.parse(localStorage.getItem("projects") || "[]");
-    const foundProject = projects.find((p) => String(p.id) === projectId);
-
-    if (foundProject) {
-      setProject(foundProject);
-
-      const foundSubtask = (foundProject.subtasks || []).find(
-        (sub) => String(sub.id) === nodeId
-      );
-      setSubtask(foundSubtask);
-    }
+    const run = async () => {
+      const foundProject = await getProjectFromDb(projectId);
+      if (foundProject) {
+        setProject(foundProject);
+        const foundSubtask = (foundProject.subtasks || []).find(
+          (sub) => String(sub.id) === String(nodeId)
+        );
+        setSubtask(foundSubtask || null);
+      } else {
+        setProject(null);
+      }
+    };
+    run();
   }, [projectId, nodeId]);
 
   if (!project) return <div>Project Loading...</div>;

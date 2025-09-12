@@ -7,7 +7,7 @@ import ReactFlow, {
   addEdge,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import "./Detail.css";
+import { getProject as getProjectFromDb, updateProject as updateProjectInDb } from "../services/projects";
 
 function Detail() {
   const { id } = useParams();
@@ -22,16 +22,18 @@ function Detail() {
   // 중심 노드 ID 상수
   const CENTER_NODE_ID = "center";
 
-  // 프로젝트 불러오기
+  // 프로젝트 불러오기 (Firestore)
   useEffect(() => {
-    const projects = JSON.parse(localStorage.getItem("projects") || "[]");
-    const found = projects.find((p) => String(p.id) === id);
-    if (found) {
-      setProject(found);
-    } else {
-      alert("프로젝트를 찾을 수 없습니다.");
-      navigate("/home");
-    }
+    const run = async () => {
+      const found = await getProjectFromDb(id);
+      if (found) {
+        setProject(found);
+      } else {
+        alert("프로젝트를 찾을 수 없습니다.");
+        navigate("/home");
+      }
+    };
+    run();
   }, [id, navigate]);
 
   // subtasks → nodes 변환 함수
@@ -80,14 +82,6 @@ function Detail() {
     }
   }, [project, setNodes, setEdges]);
 
-  const updateProjectInStorage = (updatedProject) => {
-    const projects = JSON.parse(localStorage.getItem("projects") || "[]");
-    const newProjects = projects.map((p) =>
-      p.id === updatedProject.id ? updatedProject : p
-    );
-    localStorage.setItem("projects", JSON.stringify(newProjects));
-  };
-
   const onNodeClick = useCallback(
     (event, node) => {
       if (node.id !== CENTER_NODE_ID) {
@@ -104,14 +98,20 @@ function Detail() {
     [setEdges]
   );
 
-  // subtask 추가 → project.subtasks 업데이트
-  const handleAddSubtask = (newSubtask) => {
+  // subtask 추가 → Firestore의 project.subtasks 업데이트
+  const handleAddSubtask = async (newSubtask) => {
     const updated = {
       ...project,
       subtasks: [...(project.subtasks || []), newSubtask],
     };
     setProject(updated);
-    updateProjectInStorage(updated);
+    try {
+      await updateProjectInDb(project.id, { subtasks: updated.subtasks });
+    } catch (e) {
+      // rollback on failure
+      alert("서브태스크 저장 중 오류가 발생했습니다.");
+      setProject(project);
+    }
     setShowForm(false);
   };
 
@@ -121,20 +121,11 @@ function Detail() {
     handleAddSubtask(newSubtaskWithId);
   };
 
-  // 상태 업데이트 이후 값 찍기
-  useEffect(() => {
-    console.log("Nodes updated:", nodes);
-  }, [nodes]);
-
-  useEffect(() => {
-    console.log("Edges updated:", edges);
-  }, [edges]);
-
   if (!project) return <div>Loading...</div>;
 
-return (
-    <div className="detail-container">
-      <header className="detail-header">
+  return (
+    <div>
+      <header className="top">
         <div className="nav-buttons">
           <button className="btn btn-back" onClick={() => navigate(-1)}>
             ← 뒤로가기
@@ -143,33 +134,24 @@ return (
             상점
           </button>
         </div>
-        <div className="action-buttons">
-          <button className="btn btn-add" onClick={() => setShowForm(true)}>
-            세부 프로젝트 추가
-          </button>
-        </div>
       </header>
+      <div className="container">
+        <h2>메인 프로젝트: {project.title}</h2>
+        <button onClick={() => setShowForm(true)}>세부 목표 추가</button>
+        {showForm && (
+          <SubtaskForm onSubmit={handleSubmitBoth} onClose={() => setShowForm(false)} />
+        )}
 
-      {showForm && (
-        <div className="form-overlay">
-          <SubtaskForm
-            onSubmit={handleSubmitBoth}
-            onClose={() => setShowForm(false)}
+        <div style={{ height: 600 }}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeClick={onNodeClick}
           />
         </div>
-      )}
-
-      <div className="react-flow-container">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeClick={onNodeClick}
-          fitView
-          key={`${nodes.length}-${edges.length}`}
-        />
       </div>
     </div>
   );

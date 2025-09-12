@@ -1,17 +1,42 @@
+// Home.jsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Project from "../components/Project";
+import ProjectMap from "../components/ProjectMap";
 import ProjectForm from "../components/ProjectForm";
 import "./Home.css"
+import { subscribeAuth, getCurrentUserDisplayName } from '../services/auth';
 
 function Home() {
   const [projects, setProjects] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [positions, setPositions] = useState({});
-  const [mapOffset, setMapOffset] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [lastMousePos, setLastMousePos] = useState(null);
   const navigate = useNavigate();
+  const [displayName, setDisplayName] = useState('');
+  const [isLoadingName, setIsLoadingName] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = subscribeAuth(async (user) => {
+      console.log('Auth state changed:', user);
+      if (user) {
+        setIsLoadingName(true);
+        try {
+          const name = await getCurrentUserDisplayName();
+          console.log('Display name retrieved:', name);
+          setDisplayName(name || '사용자');
+        } catch (error) {
+          console.error('Error getting display name:', error);
+          setDisplayName('사용자');
+        } finally {
+          setIsLoadingName(false);
+        }
+      } else {
+        setDisplayName('');
+        setIsLoadingName(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("projects", JSON.stringify(projects))
@@ -28,57 +53,10 @@ function Home() {
     setPositions(storedPositions);
   }, []);
 
-  useEffect(() => {
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  });
-
-  const getPosition = (id) => {
-    const pos = positions[id];
-    return pos
-      ? {
-          top: pos.y - pos.radius + mapOffset.y,
-          left: pos.x - pos.radius + mapOffset.x,
-        }
-      : { top: 0, left: 0 };
-  };
-
   const getRadius = (priority) => {
     if (priority === "상") return 75;
     if (priority === "중") return 55;
     return 40;
-  };
-
-  const handleMouseDown = (e) => {
-    // 사이드바 영역은 드래그 제외
-    if (e.target.closest('.sidebar')) return;
-    
-    setIsDragging(true);
-    setLastMousePos({ x: e.clientX, y: e.clientY });
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isDragging || !lastMousePos) return;
-
-    const dx = e.clientX - lastMousePos.x;
-    const dy = e.clientY - lastMousePos.y;
-
-    setMapOffset((prev) => ({
-      x: prev.x + dx,
-      y: prev.y + dy,
-    }));
-
-    setLastMousePos({ x: e.clientX, y: e.clientY });
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-    setLastMousePos(null);
   };
 
   const handleAddProject = (newProject) => {
@@ -217,51 +195,25 @@ function Home() {
     return today.toISOString().split('T')[0];
   };
 
-  return (
+  return ( 
     <div className="game-container">
-      {/* 메인 맵 영역 */}
-      <div 
-        className="map-area"
-        onMouseDown={handleMouseDown}
-        style={{
-          position: "relative",
-          overflow: "hidden",
-          userSelect: isDragging ? "none" : "auto",
-          cursor: isDragging ? "grabbing" : "grab",
-        }}
-      >
-        {projects.map((project) => (
-          <Project
-            key={project.id}
-            project={project}
-            onDeleteProject={deleteProject}
-            onEditProject={editProject}
-            position={getPosition(project.id)}
-          />
-        ))}
-
-        {showForm && (
-          <ProjectForm
-            onSubmit={handleAddProject}
-            onClose={() => setShowForm(false)}
-          />
-        )}
-      </div>
-
       {/* 게임 스타일 사이드바 */}
       <div className="sidebar">
-        {/* 프로필 섹션 */}
         <div className="profile-section">
           <div className="profile-avatar">
             <div className="avatar-circle"></div>
           </div>
-        </div>
-        <div className="profile-info">
-          <h2 className="profile-name">플레이어</h2>
-          <p className="profile-date">{getCurrentDate()}</p>
+          <div className="profile-info">
+            <h2 className="profile-name">코딩잘하고싶엉</h2>
+            <button
+              className="logout-button"
+              onClick={() => navigate("/")}
+            >
+              로그아웃
+            </button>
+          </div>
         </div>
 
-        {/* 메뉴 버튼들 */}
         <div className="menu-section">
           <button 
             className="game-button add-project"
@@ -287,28 +239,57 @@ function Home() {
           >
             로그아웃
           </button>
+        </div>    
+      </div>
+
+      {/* 메인 콘텐츠 영역 */}
+      <div className="main-content">
+        {/* 헤더 */}
+        <header className="main-header">
+          <p>{getCurrentDate()}</p>
+          <h1>
+            {isLoadingName ? '로딩 중...' : `${displayName || '사용자'}님`}, 오늘은 어떤 우주를 정복해볼까요?
+          </h1>
+        </header>
+
+        {/*작업영역*/}
+        <div className="workspace">
+          {/* 프로젝트 맵 */}
+          <div className="project-map-container">
+            <ProjectMap
+              projects={projects}
+              positions={positions}
+              onDeleteProject={deleteProject}
+              onEditProject={editProject}
+              onPositionsChange={setPositions}
+            />
+          
+            {showForm && (
+              <ProjectForm
+                onSubmit={handleAddProject}
+                onClose={() => setShowForm(false)}
+              />
+            )}
+          </div>
+          {/*우측 패널*/}
+          <div className="right-pannel">
+            <div className="todo">
+              <h3>오늘의 할 일</h3>
+              {/*투두리스트 추가예정*/}
+            </div>
+            <div className="inspiration">
+              <h3>영감카드</h3>
+            </div>
+          </div>
         </div>
 
-        {/* 상태 정보 */}
-        <div className="status-section">
-          <div className="status-item">
-            <span className="status-label">총 프로젝트</span>
-            <span className="status-value">{projects.length}</span>
+        {/* 타임라인 */}
+        <footer className="timeline-container">
+          <div className="timeline">
+            <h3>프로젝트 타임라인</h3>
+            {/* 타임라인 내용 추가 예정 */}
           </div>
-          <div className="status-item">
-            <span className="status-label">완료된 프로젝트</span>
-            <span className="status-value">
-              {projects.filter(p => p.status === '완료').length}
-            </span>
-          </div>
-        </div>
-
-        {/* 하단 팁 */}
-        <div className="tip-section">
-          <div className="tip-box">
-            <p>💡 팁: 마우스로 맵을 드래그하여 이동할 수 있습니다!</p>
-          </div>
-        </div>
+        </footer>
       </div>
     </div>
   );
