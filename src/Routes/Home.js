@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProjectMap from "../components/ProjectMap";
 import ProjectForm from "../components/ProjectForm";
+import ProjectTimeline from "../components/ProjectTimeline";
 import "./Home.css"
 import { subscribeAuth, getCurrentUserDisplayName } from '../services/auth';
 import { 
@@ -323,11 +324,10 @@ function Home() {
         </div>
 
         <div className="menu-section">
-          <button 
+          <button
             className="game-button search"
           >
             검색
-            {/*팝업관련 코드 추가예정*/}
           </button>
           <button 
             className="game-button add-project"
@@ -341,12 +341,9 @@ function Home() {
           >
             상점
           </button>
-          <button 
-            className="game-button logout"
-            onClick={() => navigate("/")}
-          >
-            로그아웃
-          </button>
+        </div>
+        <div>
+          <h5>프로젝트 목록</h5>
         </div>    
       </div>
 
@@ -393,10 +390,7 @@ function Home() {
 
         {/* 타임라인 */}
         <footer className="timeline-container">
-          <div className="timeline">
-            <h3>프로젝트 타임라인</h3>
-            {/* 타임라인 내용 추가 예정 */}
-          </div>
+          <ProjectTimeline projects={projects} />
         </footer>
       </div>
     </div>
