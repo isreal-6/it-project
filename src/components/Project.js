@@ -23,7 +23,11 @@ function Project({ project, onDeleteProject, onEditProject, position }) {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Link to={`/project/${project.id}`} className={priorityClass}>
+      <Link 
+        to={`/project/${project.id}`} 
+        state={{project}}
+        className={priorityClass}
+      >
         <span className="project-title">{project.title}</span>
       </Link>
 

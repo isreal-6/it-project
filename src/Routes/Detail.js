@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState, useCallback } from "react";
 import SubtaskForm from "../components/SubtaskForm";
 import ReactFlow, {
@@ -12,9 +12,11 @@ import { getProject as getProjectFromDb, updateProject as updateProjectInDb } fr
 function Detail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [project, setProject] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -22,19 +24,46 @@ function Detail() {
   // 중심 노드 ID 상수
   const CENTER_NODE_ID = "center";
 
-  // 프로젝트 불러오기 (Firestore)
+  // 프로젝트 불러오기 - 상태 전달 우선, 없으면 Firebase 조회
   useEffect(() => {
-    const run = async () => {
-      const found = await getProjectFromDb(id);
-      if (found) {
-        setProject(found);
-      } else {
-        alert("프로젝트를 찾을 수 없습니다.");
+    const loadProject = async () => {
+      try {
+        setLoading(true);
+        
+        // 1. 먼저 전달받은 상태 확인
+        if (location.state?.project) {
+          console.log('상태로 전달받은 프로젝트 사용:', location.state.project);
+          setProject(location.state.project);
+          setLoading(false);
+          return;
+        }
+
+        // 2. 상태가 없으면 Firebase에서 조회 (오프라인 처리 포함)
+        console.log('Firebase에서 프로젝트 조회 시도:', id);
+        const found = await getProjectFromDb(id);
+        
+        if (found) {
+          setProject(found);
+        } else {
+          alert("프로젝트를 찾을 수 없습니다.");
+          navigate("/home");
+        }
+      } catch (error) {
+        console.error('프로젝트 로딩 오류:', error);
+        
+        if (error.code === 'unavailable') {
+          alert("인터넷 연결을 확인해주세요. 홈 화면으로 돌아갑니다.");
+        } else {
+          alert("프로젝트를 불러오는 중 오류가 발생했습니다.");
+        }
         navigate("/home");
+      } finally {
+        setLoading(false);
       }
     };
-    run();
-  }, [id, navigate]);
+
+    loadProject();
+  }, [id, navigate, location.state]);
 
   // subtasks → nodes 변환 함수
   const generateNodesFromProject = (project) => {
@@ -108,6 +137,7 @@ function Detail() {
     try {
       await updateProjectInDb(project.id, { subtasks: updated.subtasks });
     } catch (e) {
+      console.error('서브태스크 저장 오류:', e);
       // rollback on failure
       alert("서브태스크 저장 중 오류가 발생했습니다.");
       setProject(project);
@@ -121,7 +151,21 @@ function Detail() {
     handleAddSubtask(newSubtaskWithId);
   };
 
-  if (!project) return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <p>프로젝트를 불러오는 중...</p>
+      </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <p>프로젝트를 찾을 수 없습니다.</p>
+      </div>
+    );
+  }
 
   return (
     <div>
