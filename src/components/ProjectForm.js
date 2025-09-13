@@ -1,7 +1,7 @@
 // ProjectForm.js
-
 import { useState } from "react";
-import "./ProjectForm.css"; // (이름 다를 경우 수정)
+import { Timestamp } from "firebase/firestore";
+import "./ProjectForm.css";
 
 function ProjectForm({ onSubmit, onClose }) {
   const [title, setTitle] = useState("");
@@ -12,7 +12,18 @@ function ProjectForm({ onSubmit, onClose }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title || !deadline) return;
-    onSubmit({ title, deadline, progress: Number(progress), priority });
+
+    // deadline을 Timestamp로 변환
+    const deadlineTimestamp = deadline instanceof Date
+      ? Timestamp.fromDate(deadline)
+      : new Date(deadline); // 혹시 문자열이면 Date로 변환 후 Timestamp
+
+    onSubmit({ 
+      title, 
+      deadline: deadlineTimestamp, 
+      progress: Number(progress), 
+      priority 
+    });
     onClose();
   };
 
@@ -31,7 +42,7 @@ function ProjectForm({ onSubmit, onClose }) {
             <input
               type="date"
               value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
+              onChange={(e) => setDeadline(new Date(e.target.value))}
             />
           </label>
 
