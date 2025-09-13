@@ -1,115 +1,30 @@
 /* ProjectTimeline.css */
-
-.project-timeline {
-  padding: 15px 20px;
-  background: #2c3e50; /* 어두운 배경색 */
-  border-radius: 15px;
-  margin: 0;
-  color: white;
-}
-
-.timeline-title {
-  margin: 0 0 15px 0;
-  font-size: 18px;
-  text-align: center;
-}
-
-.timeline-empty {
-  padding: 10px;
-  text-align: center;
-  color: #95a5a6;
-  font-style: italic;
-}
-
-.timeline-item {
-  margin-bottom: 15px;
-}
-
-.timeline-info {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 5px;
-  font-size: 13px;
-}
-
-.timeline-project-title {
-  font-weight: bold;
-}
-
-.timeline-project-dday {
-  font-style: italic;
-  color: #bdc3c7;
-}
-
-.timeline-track-container {
+.timeline-container {
   position: relative;
-  height: 20px; /* 트랙 높이 조정 */
-  display: flex;
-  align-items: center;
-}
-
-.timeline-track {
   width: 100%;
-  height: 6px;
-  background: #34495e;
-  border-radius: 3px;
-  position: relative;
+  height: 40px;
+  margin: 20px 0;
 }
 
-.timeline-progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #764ba2, #667eea);
-  border-radius: 3px;
+.timeline-line {
   position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background-color: #ccc;
+  transform: translateY(-50%);
+  border-radius: 2px;
 }
 
-.timeline-project-circle {
+.timeline-dot {
   position: absolute;
+  top: 50%;
   width: 16px;
   height: 16px;
+  background-color: #007bff;
   border-radius: 50%;
-  border: 2px solid white;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-  transition: transform 0.2s ease;
-  transform: translate(-50%, -50%); /* 원의 중심으로 위치 조정 */
-  top: 50%;
-  z-index: 5;
-}
-
-.timeline-legend {
-  display: flex;
-  justify-content: center;
-  gap: 15px;
-  margin-top: 15px;
-  font-size: 12px;
-}
-
-.timeline-legend-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: white;
-}
-
-.timeline-legend-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 1px solid white;
-}
-
-.timeline-legend-dot--high {
-  background: #ff6b9d;
-}
-
-.timeline-legend-dot--medium {
-  background: #ffd93d;
-}
-
-.timeline-legend-dot--low {
-  background: #6bcfff;
-}
-
-.timeline-legend-dot--overdue {
-  background: #ff4444;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  transition: left 0.3s ease;
 }

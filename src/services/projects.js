@@ -54,7 +54,7 @@ export const listProjects = async (userId) => {
     const data = d.data();
     const project = {
       id: d.id,
-      name: data.name,                    // ✅ name 필드 포함
+      title: data.title,                    
       priority: data.priority,
       deadline: data.deadline,
       description: data.description,      // ✅ description 필드도 포함

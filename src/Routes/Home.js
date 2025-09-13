@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProjectMap from "../components/ProjectMap";
 import ProjectForm from "../components/ProjectForm";
+import Inspiration from "../components/Inspiration";
 import ProjectTimeline from "../components/ProjectTimeline";
 import "./Home.css"
 import { subscribeAuth, getCurrentUserDisplayName } from '../services/auth';
@@ -383,7 +384,7 @@ function Home() {
               {/*투두리스트 추가예정*/}
             </div>
             <div className="inspiration">
-              <h3>영감카드</h3>
+              <Inspiration />
             </div>
           </div>
         </div>
