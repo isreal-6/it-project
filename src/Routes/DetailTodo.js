@@ -12,6 +12,19 @@ function DetailTodo() {
   const [project, setProject] = useState(null);
   const [subtask, setSubtask] = useState(null);
 
+  // Firebase Timestamp를 'YYYY-MM-DD' 형식의 문자열로 변환하는 헬퍼 함수
+  const timestampToDateString = (timestamp) => {
+    if (!timestamp) return '';
+    // Timestamp 객체인지 확인
+    if (timestamp && typeof timestamp.toDate === 'function') {
+      return timestamp.toDate().toISOString().split('T')[0];
+    }
+    // 이미 문자열인 경우
+    if (typeof timestamp === 'string') {
+      return timestamp.split('T')[0];
+    }
+    return '';
+  };
   useEffect(() => {
     const run = async () => {
       const foundProject = await getProjectFromDb(projectId);
@@ -47,7 +60,7 @@ function DetailTodo() {
         {subtask ? (
           <>
             <h3>{subtask.title}</h3>
-            <p>마감일: {subtask.deadline}</p>
+            <p>마감일: {timestampToDateString(subtask.deadline)}</p>
             <p>진행도: {subtask.progress}%</p>
           </>
         ) : (

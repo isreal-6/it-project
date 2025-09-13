@@ -1,18 +1,40 @@
 import { useState } from "react";
+import { Timestamp } from 'firebase/firestore';
 import "./EditProjectForm.css"
 
 function EditProjectForm({ project, onSubmit, onClose }) {
+  // Timestamp, Date, String 등 다양한 날짜 형식을 'YYYY-MM-DD'로 변환
+  const formatDateForInput = (dateValue) => {
+    if (!dateValue) return '';
+    
+    let date;
+    if (dateValue.toDate) { // Firestore Timestamp
+      date = dateValue.toDate();
+    } else if (dateValue instanceof Date) { // JavaScript Date
+      date = dateValue;
+    } else if (typeof dateValue === 'string') { // String
+      date = new Date(dateValue);
+    } else {
+      return ''; // 알 수 없는 타입
+    }
+
+    if (isNaN(date.getTime())) return ''; // 유효하지 않은 날짜
+
+    return date.toISOString().split('T')[0];
+  };
+
   const [title, setTitle] = useState(project.title);
-  const [deadline, setDeadline] = useState(project.deadline);
+  const [deadline, setDeadline] = useState(formatDateForInput(project.deadline));
   const [progress, setProgress] = useState(project.progress);
   const [priority, setPriority] = useState(project.priority || "중");
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // 날짜 문자열을 Timestamp 객체로 변환하여 전달
     onSubmit({
       ...project,
       title,
-      deadline,
+      deadline: deadline ? Timestamp.fromDate(new Date(deadline)) : null,
       progress: Number(progress),
       priority, 
     });

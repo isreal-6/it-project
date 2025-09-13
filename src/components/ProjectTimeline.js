@@ -1,56 +1,69 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import './ProjectTimeline.css'
 
 const ProjectTimeline = ({ projects }) => {
-  // 타임라인 데이터 계산
-  // 타임라인 데이터 계산
-const getTimelineData = () => {
-  if (!projects || projects.length === 0) return [];
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-  const today = new Date();
-  
-  // 각 프로젝트의 시작일과 마감일 추출
-  const projectsWithDates = projects.map(project => {
-    const startDate = project.createdAt?.toDate ? project.createdAt.toDate() : new Date(project.createdAt);
-    const deadline = new Date(project.deadline);
-    
-    return {
-      ...project,
-      startDate,
-      deadline
-    };
-  });
+  // 실시간 업데이트를 위한 useEffect
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // 1분마다 업데이트
 
-  // 각 프로젝트의 위치 계산 (개별 프로젝트의 진행률 기준)
-  return projectsWithDates.map(project => {
-    // 각 프로젝트의 총 기간
-    const projectTotalDays = (project.deadline - project.startDate) / (1000 * 60 * 60 * 24);
-    
-    // 프로젝트 시작일부터 현재까지의 경과 일수
-    const elapsedDays = (today - project.startDate) / (1000 * 60 * 60 * 24);
-    
-    // 프로젝트 진행률 (0 = 시작일, 1 = 마감일)
-    let progressRatio = elapsedDays / projectTotalDays;
-    
-    // 0-100% 범위로 제한
-    progressRatio = Math.max(0, Math.min(1, progressRatio));
-    
-    // 위치를 0-100% 범위로 변환
-    const position = progressRatio * 100;
-    
-    // 마감일까지 남은 일수 계산
-    const daysToDeadline = Math.ceil((project.deadline - today) / (1000 * 60 * 60 * 24));
-    
-    return {
-      ...project,
-      position,
-      daysToDeadline,
-      isOverdue: daysToDeadline < 0
-    };
-  });
-};
+    return () => clearInterval(timer);
+  }, []);
 
-  // 우선순위에 따른 색상 결정
+  // 타임라인 데이터 계산 (useCallback으로 메모이제이션)
+  const getTimelineData = useCallback((currentProjects, today) => {
+    if (!currentProjects || currentProjects.length === 0) return [];
+
+    return currentProjects.map(project => {
+      // 날짜 데이터가 유효하지 않으면 계산하지 않음
+      if (!project.createdAt || !project.deadline) {
+        return { ...project, position: 0, daysToDeadline: 'N/A', isOverdue: false };
+      }
+
+      // Timestamp를 Date 객체로 변환
+      const startDate = project.createdAt.toDate ? project.createdAt.toDate() : new Date(project.createdAt);
+      const deadline = project.deadline.toDate ? project.deadline.toDate() : new Date(project.deadline);
+
+      // 날짜가 유효하지 않은 경우 처리
+      if (isNaN(startDate.getTime()) || isNaN(deadline.getTime())) {
+        return { ...project, position: 0, daysToDeadline: 'N/A', isOverdue: false };
+      }
+
+      const projectTotalMs = deadline.getTime() - startDate.getTime();
+      const elapsedMs = today.getTime() - startDate.getTime();
+
+      // 프로젝트 총 기간이 0 이하일 경우 (오류 방지)
+      if (projectTotalMs <= 0) {
+        return { ...project, position: today > deadline ? 100 : 0, daysToDeadline: 0, isOverdue: today > deadline };
+      }
+
+      // 진행률 (0 = 시작일, 1 = 마감일)
+      const progressRatio = elapsedMs / projectTotalMs;
+      
+      // 위치를 0-100% 범위로 제한
+      const position = Math.max(0, Math.min(100, progressRatio * 100));
+
+      // 마감일까지 남은 일수 계산
+      const daysToDeadline = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
+
+      return {
+        ...project,
+        position,
+        daysToDeadline,
+        isOverdue: daysToDeadline < 0,
+      };
+    });
+  }, []);
+
+  // useMemo를 사용하여 성능 최적화
+  const timelineData = useMemo(() => {
+    // getTimelineData 함수를 의존성 배열에 추가합니다.
+    return getTimelineData(projects, currentTime);
+  }, [projects, currentTime, getTimelineData]);
+
   const getProjectColor = (priority, isOverdue, progress) => {
     if (isOverdue) return '#ff4444'; // 빨간색 (마감 초과)
     if (progress === 100) return '#44ff44'; // 초록색 (완료)
@@ -63,8 +76,6 @@ const getTimelineData = () => {
     }
   };
 
-  const timelineData = getTimelineData();
-
   if (timelineData.length === 0) {
     return (
       <div className="timeline-empty">
@@ -75,74 +86,35 @@ const getTimelineData = () => {
 
   return (
     <div className="project-timeline">
-      <h3 className="timeline-title">
-        프로젝트 타임라인
-      </h3>
-      
-      <div className="timeline-track-container">
-        {/* 타임라인 가로 직선 */}
-        <div className="timeline-track"></div>
-        
-        {/* 현재 날짜 기준으로 TODAY 위치 계산 */}
-        {(() => {
-          const today = new Date();
-          const projectsWithDates = projects.map(project => ({
-            startDate: project.createdAt?.toDate ? project.createdAt.toDate() : new Date(project.createdAt),
-            deadline: new Date(project.deadline)
-          }));
-          
-          const allStartDates = projectsWithDates.map(p => p.startDate);
-          const allDeadlines = projectsWithDates.map(p => p.deadline);
-          
-          const earliestStart = new Date(Math.min(...allStartDates));
-          const latestDeadline = new Date(Math.max(...allDeadlines));
-          
-          const totalDays = (latestDeadline - earliestStart) / (1000 * 60 * 60 * 24);
-          const daysSinceStart = (today - earliestStart) / (1000 * 60 * 60 * 24);
-          const todayPosition = Math.max(0, Math.min(100, (daysSinceStart / totalDays) * 100));
-          
-          return (
-            <>
-              {/* 현재 위치 표시선 */}
-              <div 
-                className="timeline-today-line"
-                style={{ left: `${todayPosition}%` }}
-              ></div>
-              
-              {/* 현재 날짜 라벨 */}
-              <div 
-                className="timeline-today-label"
-                style={{ left: `${todayPosition}%` }}
-              >
-                TODAY
-              </div>
-            </>
-          );
-        })()}
-        
-        {/* 프로젝트 원들 */}
-        {timelineData.map((project, index) => (
-          <div key={project.id}>
-            {/* 프로젝트 원 */}
-            <div
-              className="timeline-project"
-              style={{
-                left: `${project.position}%`,
-                background: getProjectColor(project.priority, project.isOverdue, project.progress)
-              }}
-              title={`${project.title} - ${project.isOverdue ? '마감 초과' : `D-${project.daysToDeadline}`}`}
-            />
-            
-            {/* D-day 라벨 */}
-            <div 
-              className="timeline-dday-label"
-              style={{ left: `${project.position}%` }}
-            >
-              {project.isOverdue ? '초과' : `D-${project.daysToDeadline}`}
-            </div>
+      <h3 className="timeline-title">프로젝트 타임라인</h3>
+      {timelineData.map(project => (
+        <div key={project.id} className="timeline-item">
+          <div className="timeline-info">
+            <span className="timeline-project-title">{project.title}</span>
+            <span className="timeline-project-dday">
+              {project.isOverdue 
+                ? `D+${Math.abs(project.daysToDeadline)}` 
+                : `D-${project.daysToDeadline}`}
+            </span>
           </div>
-        ))}
-      </div>
+          <div className="timeline-track-container">
+            <div className="timeline-track">
+              <div 
+                className="timeline-progress-bar" 
+                style={{ width: `${project.position}%` }}
+              />
+            </div>
+            <div
+              className="timeline-project-circle"
+              style={{ 
+                left: `${project.position}%`,
+                backgroundColor: getProjectColor(project.priority, project.isOverdue, project.progress)
+              }}
+              title={`${project.title} - ${project.progress}% 완료`}
+            />
+          </div>
+        </div>
+      ))}
       
       {/* 범례 */}
       <div className="timeline-legend">
